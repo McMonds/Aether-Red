@@ -2,6 +2,7 @@ pub mod engine;
 pub mod ledger;
 pub mod config;
 pub mod crypto;
+pub mod worker;
 
 use anyhow::Result;
 
