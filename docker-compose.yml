@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  aether:
+    build: .
+    image: aether:latest
+    container_name: aether_engine
+    # Critical for MAC spoofing and low-level network access
+    cap_add:
+      - NET_ADMIN
+    # Optional: Use host network if you need total control (bypasses Docker bridge)
+    # network_mode: "host"
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+    environment:
+      - RUST_LOG=debug
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 4G # Reserve for "God Mode" LLM usage

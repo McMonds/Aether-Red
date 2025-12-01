@@ -1,0 +1,24 @@
+[package]
+name = "aether_core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+aether_traits = { path = "../aether_traits" }
+aether_net = { path = "../aether_net" }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+sqlx = { workspace = true }
+argon2 = { workspace = true }
+zeroize = { workspace = true }
+serde = { workspace = true }
+chrono = "0.4"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "aether_core"
+path = "src/main.rs"

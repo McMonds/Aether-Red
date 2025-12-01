@@ -1,0 +1,1 @@
+/home/monk/Work/Cryptography/cryptography_project/target/debug/libmod_auth.rlib: /home/monk/Work/Cryptography/cryptography_project/crates/aether_traits/src/lib.rs /home/monk/Work/Cryptography/cryptography_project/modules/mod_auth/src/lib.rs

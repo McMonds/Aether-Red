@@ -1,0 +1,13 @@
+[package]
+name = "mod_auth"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+aether_traits = { path = "../../crates/aether_traits" }
+async-trait = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+
+[lib]
+path = "src/lib.rs"
