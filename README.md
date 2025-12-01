@@ -853,9 +853,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Contact
 
-- **Project Lead**: [Your Name](mailto:your.email@example.com)
-- **Repository**: [GitHub](https://github.com/yourusername/cryptography_project)
-- **Issues**: [Issue Tracker](https://github.com/yourusername/cryptography_project/issues)
+- **Project Lead**: [Shimul Ahmed](mailto: mondolshimul000@gmail.com.com)
+- **Repository**: [GitHub](https://github.com/McMonds/cryptography_project)
+- **Issues**: [Issue Tracker](https://github.com/McMonds/cryptography_project/issues)
 
 ---
 
