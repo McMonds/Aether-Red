@@ -1,0 +1,6 @@
+{
+  "max_workers": 5,
+  "max_daily_per_sender": 500,
+  "proxy_check_interval_secs": 30,
+  "traffic_strategy": "smooth"
+}

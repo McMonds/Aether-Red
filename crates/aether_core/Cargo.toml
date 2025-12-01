@@ -15,11 +15,13 @@ sqlx = { workspace = true }
 argon2 = { workspace = true }
 zeroize = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
 chrono = "0.4"
 mod_traffic = { path = "../../modules/mod_traffic" }
 mod_content = { path = "../../modules/mod_content" }
 mod_auth = { path = "../../modules/mod_auth" }
 aether_tui = { path = "../aether_tui" }
+notify = "6.1"
 
 [lib]
 path = "src/lib.rs"
