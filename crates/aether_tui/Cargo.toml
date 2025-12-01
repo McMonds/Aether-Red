@@ -5,6 +5,9 @@ edition = "2021"
 
 [dependencies]
 tokio = { workspace = true }
+ratatui = "0.26"
+crossterm = "0.27"
+anyhow = "1.0"
 
 [lib]
 path = "src/lib.rs"

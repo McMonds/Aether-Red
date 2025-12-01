@@ -2,6 +2,8 @@ use tokio::sync::mpsc;
 use anyhow::Result;
 use tracing::info;
 use crate::worker::{Worker, TaskPackage};
+use crate::ledger::LedgerManager;
+use std::sync::Arc;
 
 pub struct EngineCore {
     // Command bus for system-wide commands
@@ -9,16 +11,21 @@ pub struct EngineCore {
     command_rx: mpsc::Receiver<String>,
     // Worker pool
     worker_txs: Vec<mpsc::Sender<TaskPackage>>,
+    // Persistence
+    ledger: Arc<LedgerManager>,
 }
 
 impl EngineCore {
-    pub fn new() -> Self {
+    pub async fn new(db_path: &str) -> Result<Self> {
         let (command_tx, command_rx) = mpsc::channel(100);
-        Self {
+        let ledger = Arc::new(LedgerManager::new(db_path, "secret_key").await?);
+        
+        Ok(Self {
             command_tx,
             command_rx,
             worker_txs: Vec::new(),
-        }
+            ledger,
+        })
     }
 
     pub async fn run(&mut self) -> Result<()> {

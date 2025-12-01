@@ -10,6 +10,7 @@ tokio = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+tracing-appender = "0.2"
 sqlx = { workspace = true }
 argon2 = { workspace = true }
 zeroize = { workspace = true }
@@ -18,6 +19,7 @@ chrono = "0.4"
 mod_traffic = { path = "../../modules/mod_traffic" }
 mod_content = { path = "../../modules/mod_content" }
 mod_auth = { path = "../../modules/mod_auth" }
+aether_tui = { path = "../aether_tui" }
 
 [lib]
 path = "src/lib.rs"
