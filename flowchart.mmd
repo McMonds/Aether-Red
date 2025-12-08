@@ -1,0 +1,105 @@
+flowchart TD
+    %% =========================================================
+    %% STYLING: Enterprise Standard (Based on User Snippet 3)
+    %% =========================================================
+    classDef boot fill:#2c3e50,stroke:#34495e,color:#fff,stroke-width:2px;
+    classDef core fill:#e67e22,stroke:#d35400,color:#fff,stroke-width:2px;
+    classDef data fill:#f1c40f,stroke:#f39c12,color:#333,stroke-width:2px;
+    classDef net fill:#27ae60,stroke:#2ecc71,color:#fff,stroke-width:2px;
+    classDef mod fill:#8e44ad,stroke:#9b59b6,color:#fff,stroke-width:2px;
+    classDef io fill:#95a5a6,stroke:#7f8c8d,color:#fff,stroke-dasharray: 5 5;
+    classDef future fill:#34495e,stroke:#2c3e50,color:#ccc,stroke-dasharray: 5 5;
+
+    %% =========================================================
+    %% PHASE 1: SECURE BOOTSTRAP
+    %% =========================================================
+    subgraph PHASE_1 [PHASE 1: SECURE BOOTSTRAP]
+        direction TB
+        START([System Start]):::boot
+        START --> LOAD_CONFIG{Load config.json}
+        
+        LOAD_CONFIG -- "Success" --> INIT_CRYPTO[Init CryptoManager\nArgon2id Hash Gen]:::boot
+        LOAD_CONFIG -- "Watch Mode" --> HOT_RELOAD((Config Watcher)):::io
+        
+        HOT_RELOAD -.->|FS Events| LOAD_CONFIG
+        
+        INIT_CRYPTO --> INIT_LEDGER[Init SQLite Ledger\nWAL Mode Active]:::data
+        INIT_LEDGER --> INIT_TUI[Launch Ratatui Interface]:::boot
+    end
+
+    %% =========================================================
+    %% PHASE 2: ORCHESTRATION ENGINE
+    %% =========================================================
+    subgraph PHASE_2 [PHASE 2: ORCHESTRATION ENGINE]
+        direction TB
+        INIT_TUI --> ENGINE_UP[Spawn Supervisor Actor]:::core
+        
+        ENGINE_UP --> WORKER_POOL[Spawn Worker Pool\n(N Threads)]:::core
+        
+        ENGINE_UP -- "Channel: Commands" --> WORKER_POOL
+        
+        WORKER_POOL --> REQ_STRATEGY{Fetch Strategy}:::mod
+        
+        %% Pluggable Modules
+        REQ_STRATEGY -- "mod_traffic" --> TRAFFIC[Traffic Shaper\n(Smooth/Stealth)]:::mod
+        REQ_STRATEGY -- "mod_content" --> CONTENT[Content Gen\n(Spintax/UUID)]:::mod
+    end
+
+    %% =========================================================
+    %% PHASE 3: INTELLIGENT DISPATCH
+    %% =========================================================
+    subgraph PHASE_3 [PHASE 3: STATE & LOGIC]
+        direction TB
+        WORKER_POOL --> DEDUP{Deduplication Check}:::data
+        
+        DEDUP -- "Exists in DB" --> DROP_TASK[Log: SKIPPED]:::data
+        DEDUP -- "New Target" --> LIMIT_CHECK{Rolling Limit Check}
+        
+        LIMIT_CHECK -- "> Max Daily" --> COOLDOWN[Queue: RETRY_LATER]
+        LIMIT_CHECK -- "Safe" --> NET_handoff[Handover to Net Layer]
+    end
+
+    %% =========================================================
+    %% PHASE 4: SECURE NETWORK I/O
+    %% =========================================================
+    subgraph PHASE_4 [PHASE 4: SECURE NETWORK I/O]
+        direction TB
+        NET_handoff --> PROXY_MAN[ProxyManager\nFetch Healthy SOCKS5]:::net
+        
+        PROXY_MAN -- "Health Check" --> CHECK_EXT((Tor/Ext Check)):::net
+        
+        PROXY_MAN --> TLS_CTX[Build TLS Context]:::net
+        TLS_CTX --> FINGERPRINT[TlsFingerprinter\nApply JA3 Mock]:::net
+        
+        FINGERPRINT --> CONNECT[Open TCP Stream]:::net
+        CONNECT --> PROTOCOL[Execute SMTP/HTTP]:::net
+    end
+
+    %% =========================================================
+    %% PHASE 5: FUTURE ROADMAP (Planned)
+    %% =========================================================
+    subgraph PHASE_5 [PHASE 5: ROADMAP / GOD MODE]
+        direction TB
+        MAC_SPOOF[Hardware Identity Wash\n(MAC Spoofing)]:::future
+        PID_ALGO[PID Traffic Controller]:::future
+        HW_LOCK[Hardware Integrity Check]:::future
+        
+        PROXY_MAN -.-> MAC_SPOOF
+        TRAFFIC -.-> PID_ALGO
+        START -.-> HW_LOCK
+    end
+
+    %% =========================================================
+    %% RESULT & PERSISTENCE CYCLE
+    %% =========================================================
+    PROTOCOL -- "200 OK / 250 OK" --> SUCCESS[Mark SUCCESS]:::data
+    PROTOCOL -- "Error / Timeout" --> FAIL[Mark FAILED]:::data
+    
+    SUCCESS --> COMMIT_DB[(Write to Ledger.db)]:::data
+    FAIL --> COMMIT_DB
+    
+    COMMIT_DB --> REFRESH_TUI[Update Dashboard UI]:::boot
+    REFRESH_TUI -.->|Next Loop| WORKER_POOL
+
+    %% Connect Hot Reload back to Logic
+    HOT_RELOAD -.->|Update| WORKER_POOL
