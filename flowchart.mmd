@@ -18,12 +18,12 @@ flowchart TD
         START([System Start]):::boot
         START --> LOAD_CONFIG{Load config.json}
         
-        LOAD_CONFIG -- "Success" --> INIT_CRYPTO[Init CryptoManager\nArgon2id Hash Gen]:::boot
+        LOAD_CONFIG -- "Success" --> INIT_CRYPTO["Init CryptoManager\nArgon2id Hash Gen"]:::boot
         LOAD_CONFIG -- "Watch Mode" --> HOT_RELOAD((Config Watcher)):::io
         
         HOT_RELOAD -.->|FS Events| LOAD_CONFIG
         
-        INIT_CRYPTO --> INIT_LEDGER[Init SQLite Ledger\nWAL Mode Active]:::data
+        INIT_CRYPTO --> INIT_LEDGER["Init SQLite Ledger\nWAL Mode Active"]:::data
         INIT_LEDGER --> INIT_TUI[Launch Ratatui Interface]:::boot
     end
 
@@ -34,15 +34,15 @@ flowchart TD
         direction TB
         INIT_TUI --> ENGINE_UP[Spawn Supervisor Actor]:::core
         
-        ENGINE_UP --> WORKER_POOL[Spawn Worker Pool\n(N Threads)]:::core
+        ENGINE_UP --> WORKER_POOL["Spawn Worker Pool\n(N Threads)"]:::core
         
         ENGINE_UP -- "Channel: Commands" --> WORKER_POOL
         
         WORKER_POOL --> REQ_STRATEGY{Fetch Strategy}:::mod
         
         %% Pluggable Modules
-        REQ_STRATEGY -- "mod_traffic" --> TRAFFIC[Traffic Shaper\n(Smooth/Stealth)]:::mod
-        REQ_STRATEGY -- "mod_content" --> CONTENT[Content Gen\n(Spintax/UUID)]:::mod
+        REQ_STRATEGY -- "mod_traffic" --> TRAFFIC["Traffic Shaper\n(Smooth/Stealth)"]:::mod
+        REQ_STRATEGY -- "mod_content" --> CONTENT["Content Gen\n(Spintax/UUID)"]:::mod
     end
 
     %% =========================================================
@@ -64,12 +64,12 @@ flowchart TD
     %% =========================================================
     subgraph PHASE_4 [PHASE 4: SECURE NETWORK I/O]
         direction TB
-        NET_handoff --> PROXY_MAN[ProxyManager\nFetch Healthy SOCKS5]:::net
+        NET_handoff --> PROXY_MAN["ProxyManager\nFetch Healthy SOCKS5"]:::net
         
         PROXY_MAN -- "Health Check" --> CHECK_EXT((Tor/Ext Check)):::net
         
         PROXY_MAN --> TLS_CTX[Build TLS Context]:::net
-        TLS_CTX --> FINGERPRINT[TlsFingerprinter\nApply JA3 Mock]:::net
+        TLS_CTX --> FINGERPRINT["TlsFingerprinter\nApply JA3 Mock"]:::net
         
         FINGERPRINT --> CONNECT[Open TCP Stream]:::net
         CONNECT --> PROTOCOL[Execute SMTP/HTTP]:::net
@@ -80,7 +80,7 @@ flowchart TD
     %% =========================================================
     subgraph PHASE_5 [PHASE 5: ROADMAP / GOD MODE]
         direction TB
-        MAC_SPOOF[Hardware Identity Wash\n(MAC Spoofing)]:::future
+        MAC_SPOOF["Hardware Identity Wash\n(MAC Spoofing)"]:::future
         PID_ALGO[PID Traffic Controller]:::future
         HW_LOCK[Hardware Integrity Check]:::future
         
