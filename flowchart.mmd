@@ -42,7 +42,7 @@ flowchart TD
         
         %% Pluggable Modules
         REQ_STRATEGY -- "mod_traffic" --> TRAFFIC["Traffic Shaper\n(Smooth/Stealth)"]:::mod
-        REQ_STRATEGY -- "mod_content" --> CONTENT["Content Gen\n(Spintax/UUID)"]:::mod
+        REQ_STRATEGY -- "mod_fuzz" --> CONTENT["Polyglot Fuzzer\n(Overflow/Injection)"]:::mod
     end
 
     %% =========================================================
@@ -72,7 +72,7 @@ flowchart TD
         TLS_CTX --> FINGERPRINT["TlsFingerprinter\nApply JA3 Mock"]:::net
         
         FINGERPRINT --> CONNECT[Open TCP Stream]:::net
-        CONNECT --> PROTOCOL[Execute SMTP/HTTP]:::net
+        CONNECT --> PROTOCOL[Execute HTTP Attack]:::net
     end
 
     %% =========================================================
@@ -92,10 +92,10 @@ flowchart TD
     %% =========================================================
     %% RESULT & PERSISTENCE CYCLE
     %% =========================================================
-    PROTOCOL -- "200 OK / 250 OK" --> SUCCESS[Mark SUCCESS]:::data
-    PROTOCOL -- "Error / Timeout" --> FAIL[Mark FAILED]:::data
+    PROTOCOL -- "200-299 OK" --> SUCCESS[Telemetry: SUCCESS]:::data
+    PROTOCOL -- "4xx/5xx / Timeout" --> FAIL[Telemetry: FAILED]:::data
     
-    SUCCESS --> COMMIT_DB[(Write to Ledger.db)]:::data
+    SUCCESS --> COMMIT_DB[(Log to Metrics Ledger)]:::data
     FAIL --> COMMIT_DB
     
     COMMIT_DB --> REFRESH_TUI[Update Dashboard UI]:::boot

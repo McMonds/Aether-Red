@@ -37,7 +37,7 @@ pub async fn run_tui() -> Result<()> {
                 .split(f.size());
 
             // Header
-            let header = Paragraph::new("Project ÆTHER - Secure Terminal Engine")
+            let header = Paragraph::new("Aether-Red - Adversarial Emulation Framework")
                 .block(Block::default().borders(Borders::ALL));
             f.render_widget(header, chunks[0]);
 
