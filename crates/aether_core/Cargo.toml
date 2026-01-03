@@ -16,9 +16,11 @@ argon2 = { workspace = true }
 zeroize = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+reqwest = { workspace = true }
+http = "0.2"
 chrono = "0.4"
 mod_traffic = { path = "../../modules/mod_traffic" }
-mod_content = { path = "../../modules/mod_content" }
+mod_fuzz = { path = "../../modules/mod_fuzz" }
 mod_auth = { path = "../../modules/mod_auth" }
 aether_tui = { path = "../aether_tui" }
 notify = "6.1"

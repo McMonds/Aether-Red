@@ -1,4 +1,4 @@
-use sqlx::{SqlitePool, sqlite::SqliteConnectOptions, Row};
+use sqlx::{SqlitePool, sqlite::SqliteConnectOptions};
 use anyhow::Result;
 use std::str::FromStr;
 use chrono::{Utc, Duration};

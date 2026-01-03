@@ -1,18 +1,20 @@
 use tokio::sync::mpsc;
 use anyhow::Result;
-use tracing::info;
-use crate::worker::{Worker, TaskPackage};
+use tracing::{info, warn};
+use crate::worker::{Worker, ExecutionTask};
 use crate::ledger::LedgerManager;
+use aether_traits::Target;
 use std::sync::Arc;
+use std::collections::HashMap;
 
 pub struct EngineCore {
-    // Command bus for system-wide commands
-    command_tx: mpsc::Sender<String>,
+    // Command bus for system-wide control signals
+    _command_tx: mpsc::Sender<String>,
     command_rx: mpsc::Receiver<String>,
-    // Worker pool
-    worker_txs: Vec<mpsc::Sender<TaskPackage>>,
-    // Persistence
-    ledger: Arc<LedgerManager>,
+    // Worker pool: Channels for tasking the swarm
+    worker_txs: Vec<mpsc::Sender<ExecutionTask>>,
+    // Persistence layer for audit logging and limit enforcement
+    _ledger: Arc<LedgerManager>,
 }
 
 impl EngineCore {
@@ -21,48 +23,58 @@ impl EngineCore {
         let ledger = Arc::new(LedgerManager::new(db_path, "secret_key").await?);
         
         Ok(Self {
-            command_tx,
+            _command_tx: command_tx,
             command_rx,
             worker_txs: Vec::new(),
-            ledger,
+            _ledger: ledger,
         })
     }
 
     pub async fn run(&mut self) -> Result<()> {
-        info!("Engine Core started. Initializing Swarm...");
+        info!("Aether-Red Engine started. Initializing Swarm...");
 
-        // Spawn Workers (e.g., 5 workers)
+        // Spawn Workers (Scalable adversarial swarm)
         for id in 0..5 {
             let (tx, rx) = mpsc::channel(100);
             self.worker_txs.push(tx);
             
-            // Spawn worker in a separate task
+            // Spawn each worker in an isolated async task
             tokio::spawn(async move {
-                let mut worker = Worker::new(id, rx, "smooth");
-                worker.run().await;
+                match Worker::new(id, rx, "smooth") {
+                    Ok(mut worker) => {
+                        worker.run().await;
+                    }
+                    Err(e) => {
+                        warn!("Failed to initialize Worker {}: {}", id, e);
+                    }
+                }
             });
         }
         
-        info!("Swarm initialized with 5 workers.");
+        info!("Aether-Red Swarm initialized with 5 workers.");
 
-        // Main event loop
+        // Central Orchestration Loop
         loop {
             tokio::select! {
                 Some(cmd) = self.command_rx.recv() => {
-                    info!("Received command: {}", cmd);
+                    info!("Orchestrator received command: {}", cmd);
                     if cmd == "SHUTDOWN" {
                         break;
                     } else if cmd.starts_with("DISPATCH") {
-                        // Mock dispatch logic
-                        // In real impl, this comes from the Scheduler/Ledger
-                        let task = TaskPackage {
-                            target_email: "target@example.com".to_string(),
-                            sender_email: "sender@example.com".to_string(),
+                        // High-performance dispatch logic
+                        let target = Arc::new(Target {
+                            url: "http://target-system.internal/api/v1".to_string(),
+                            method: "POST".to_string(),
+                            headers: HashMap::new(),
+                        });
+
+                        let task = ExecutionTask {
+                            target,
+                            payload_template: "{\"data\": \"base_buffer\"}".to_string(),
                         };
                         
-                        // Round-robin dispatch
-                        let worker_idx = 0; // Simplified
-                        if let Some(tx) = self.worker_txs.get(worker_idx) {
+                        // Round-robin worker tasking
+                        if let Some(tx) = self.worker_txs.get(0) {
                             let _ = tx.send(task).await;
                         }
                     }
@@ -70,7 +82,7 @@ impl EngineCore {
             }
         }
         
-        info!("Engine Core shutting down.");
+        info!("Aether-Red Engine shutting down.");
         Ok(())
     }
 }

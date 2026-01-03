@@ -6,7 +6,7 @@ members = [
     "crates/aether_tui",
     "crates/aether_traits",
     "modules/mod_traffic",
-    "modules/mod_content",
+    "modules/mod_fuzz",
     "modules/mod_auth",
 ]
 

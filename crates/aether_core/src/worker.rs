@@ -1,80 +1,107 @@
 use anyhow::Result;
 use tokio::sync::mpsc;
-use tracing::{info, error, debug};
+use tracing::{info, warn, debug};
 use std::sync::Arc;
-use aether_traits::{ContentGenerator, TrafficStrategy, TrafficMetrics};
-use mod_content::SpintaxGenerator;
+use std::time::{Duration, Instant};
+use reqwest::{Client, Method};
+use aether_traits::{Target, TrafficStrategy, TrafficMetrics, AttackResult, PayloadFuzzer};
 use mod_traffic::{SmoothFlow, StealthJitter};
+use mod_fuzz::PolyglotFuzzer;
 
+/// Instruction set for an adversarial execution cycle.
 #[derive(Debug, Clone)]
-pub struct TaskPackage {
-    pub target_email: String,
-    pub sender_email: String,
-    // In real impl, would contain proxy info, SMTP creds, etc.
+pub struct ExecutionTask {
+    pub target: Arc<Target>,
+    pub payload_template: String,
 }
 
 pub struct Worker {
     id: usize,
-    receiver: mpsc::Receiver<TaskPackage>,
-    // Traits for pluggable logic
-    content_gen: Arc<dyn ContentGenerator>,
+    receiver: mpsc::Receiver<ExecutionTask>,
+    client: Client,
+    fuzzer: Arc<dyn PayloadFuzzer>,
     traffic_strategy: Arc<dyn TrafficStrategy>,
 }
 
 impl Worker {
     pub fn new(
         id: usize, 
-        receiver: mpsc::Receiver<TaskPackage>,
-        strategy_type: &str
-    ) -> Self {
-        // Select strategy based on config
+        receiver: mpsc::Receiver<ExecutionTask>,
+        strategy_type: &str,
+    ) -> Result<Self> {
+        // Initialize high-performance HTTP client with default 30s timeout
+        let client = Client::builder()
+            .timeout(Duration::from_secs(30))
+            .build()?;
+
         let traffic_strategy: Arc<dyn TrafficStrategy> = if strategy_type == "stealth" {
             Arc::new(StealthJitter)
         } else {
             Arc::new(SmoothFlow)
         };
 
-        Self {
+        Ok(Self {
             id,
             receiver,
-            content_gen: Arc::new(SpintaxGenerator),
+            client,
+            fuzzer: Arc::new(PolyglotFuzzer),
             traffic_strategy,
-        }
+        })
     }
 
     pub async fn run(&mut self) {
-        info!("Worker {} started.", self.id);
+        info!("Worker {} [Adversarial] initialized.", self.id);
 
         while let Some(task) = self.receiver.recv().await {
-            debug!("Worker {} received task for {}", self.id, task.target_email);
+            debug!("Worker {} executing attack on {}", self.id, task.target.url);
             
-            if let Err(e) = self.execute_task(task).await {
-                error!("Worker {} failed task: {}", self.id, e);
-                // In a real actor model, we might report this back to the supervisor
+            // Execute and capture telemetry
+            match self.execute_attack(task).await {
+                Ok(metrics) => {
+                    info!(
+                        "Worker {} ATTACK SUCCESS | Code: {} | Latency: {}us | Size: {} bytes",
+                        self.id, metrics.status_code, metrics.latency_us, metrics.size_bytes
+                    );
+                }
+                Err(e) => {
+                    warn!("Worker {} ATTACK FAILED: {}", self.id, e);
+                }
             }
         }
 
         info!("Worker {} shutting down.", self.id);
     }
 
-    async fn execute_task(&self, task: TaskPackage) -> Result<()> {
-        // 1. Calculate Delay (Traffic Shaping)
-        let metrics = TrafficMetrics { latency_ms: 100, error_rate: 0.0 }; // Mock metrics
-        let delay = self.traffic_strategy.calculate_delay(&metrics).await;
-        tokio::time::sleep(tokio::time::Duration::from_millis(delay)).await;
+    async fn execute_attack(&self, task: ExecutionTask) -> Result<AttackResult> {
+        // 1. Calculate Jitter/Delay (Adversarial Cadence)
+        // Mock metrics for strategy calculation - in production, these are fed back from a central collector
+        let current_metrics = TrafficMetrics { latency_us: 0, error_count: 0 }; 
+        let delay = self.traffic_strategy.next_delay(&current_metrics).await;
+        tokio::time::sleep(delay).await;
 
-        // 2. Generate Content (Obfuscation)
-        let (subject, body) = self.content_gen.generate_content("Exclusive Offer").await?;
-        debug!("Generated content: Subject='{}'", subject);
+        // 2. Payload Fuzzing
+        let payload = self.fuzzer.generate(&task.payload_template).await;
 
-        // 3. Execute Network Action (Mock SMTP)
-        // In real impl, this calls aether_net::smtp::send(...)
-        // For now, we just log it.
-        info!(
-            "Worker {} SENT email to {} | Subject: {} | Delay: {}ms", 
-            self.id, task.target_email, subject, delay
-        );
+        // 3. Network Execution with Telemetry
+        let method = Method::from_bytes(task.target.method.as_bytes())?;
+        let mut request_builder = self.client.request(method, &task.target.url);
 
-        Ok(())
+        // Apply adversarial headers
+        for (key, value) in &task.target.headers {
+            request_builder = request_builder.header(key, value);
+        }
+
+        let start = Instant::now();
+        let response = request_builder.body(payload).send().await?;
+        let latency_us = start.elapsed().as_micros();
+        
+        let status_code = response.status().as_u16();
+        let size_bytes = response.bytes().await?.len();
+
+        Ok(AttackResult {
+            status_code,
+            latency_us,
+            size_bytes,
+        })
     }
 }

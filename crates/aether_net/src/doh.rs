@@ -4,8 +4,10 @@ use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
 struct DohResponse {
-    Status: i32,
-    Answer: Option<Vec<DohAnswer>>,
+    #[serde(rename = "Status")]
+    _status: i32,
+    #[serde(rename = "Answer")]
+    answer: Option<Vec<DohAnswer>>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -35,7 +37,7 @@ impl DohClient {
             .json::<DohResponse>()
             .await?;
 
-        if let Some(answers) = resp.Answer {
+        if let Some(answers) = resp.answer {
             if let Some(first) = answers.first() {
                 return Ok(first.data.clone());
             }

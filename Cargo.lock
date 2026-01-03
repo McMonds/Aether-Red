@@ -12,10 +12,12 @@ dependencies = [
  "anyhow",
  "argon2",
  "chrono",
+ "http",
  "mod_auth",
- "mod_content",
+ "mod_fuzz",
  "mod_traffic",
  "notify",
+ "reqwest",
  "serde",
  "serde_json",
  "sqlx",
@@ -1185,7 +1187,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "mod_content"
+name = "mod_fuzz"
 version = "0.1.0"
 dependencies = [
  "aether_traits",

@@ -1,30 +1,60 @@
 use async_trait::async_trait;
-use anyhow::Result;
 use serde::{Serialize, Deserialize};
+use std::collections::HashMap;
+use std::time::Duration;
 
+/// Represents a specific endpoint for security auditing or load testing.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Target {
+    pub url: String,
+    pub method: String,
+    pub headers: HashMap<String, String>,
+}
+
+impl Default for Target {
+    fn default() -> Self {
+        Self {
+            url: String::new(),
+            method: "GET".to_string(),
+            headers: HashMap::new(),
+        }
+    }
+}
+
+/// Telemetry metrics for traffic generation and load analysis.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TrafficMetrics {
-    pub latency_ms: u64,
-    pub error_rate: f64,
+    pub latency_us: u128,
+    pub error_count: u64,
 }
 
 #[async_trait]
 pub trait TrafficStrategy: Send + Sync {
-    /// Calculate the delay before the next action based on metrics
-    async fn calculate_delay(&self, metrics: &TrafficMetrics) -> u64;
+    /// Determines the next execution delay (jitter/backoff) based on current metrics.
+    async fn next_delay(&self, metrics: &TrafficMetrics) -> Duration;
     
-    /// Name of the strategy (e.g., "SmoothFlow", "StealthJitter")
+    /// Returns the semantic identifier of the strategy.
     fn name(&self) -> &str;
 }
 
+/// Handles the generation of adversarial payloads for stress testing.
 #[async_trait]
-pub trait ContentGenerator: Send + Sync {
-    /// Generate the subject and body for an email
-    async fn generate_content(&self, context: &str) -> Result<(String, String)>;
+pub trait PayloadFuzzer: Send + Sync {
+    /// Produces a fuzzed payload derived from a base template or sample.
+    async fn generate(&self, base_template: &str) -> String;
+}
+
+/// Detailed performance telemetry for a single execution cycle.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AttackResult {
+    pub status_code: u16,
+    pub latency_us: u128,
+    pub size_bytes: usize,
 }
 
 #[async_trait]
-pub trait AccountResurrector: Send + Sync {
-    /// Attempt to unlock a dead account (e.g., solve captcha)
-    async fn attempt_resurrection(&self, email: &str, password: &str) -> Result<bool>;
+pub trait NetworkClient: Send + Sync {
+    /// Core execution logic for a single adversarial request.
+    /// Returns microsecond-resolution telemetry upon completion or failure.
+    async fn execute(&self, target: &Target, payload: Option<String>) -> anyhow::Result<AttackResult>;
 }
