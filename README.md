@@ -80,20 +80,6 @@ Aether-Red is engineered for sustainable, high-velocity simulations with state-l
 
 ---
 
-## 🚦 Quick Start
-
-### Build
-```bash
-cargo build --release
-```
-
-### Execution
-```bash
-./target/release/aether_core
-```
-
----
-
 ---
 
 > [!CAUTION]
