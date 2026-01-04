@@ -3,18 +3,37 @@ use aether_net::init_network;
 use aether_tui::run_tui;
 use tracing::{info, warn};
 use rlimit::{setrlimit, Resource};
+use crossterm::terminal::{disable_raw_mode, LeaveAlternateScreen};
+use crossterm::execute;
+use std::io;
+use std::panic;
+
+/// [Directive: Ghost Terminal Fix]
+/// Custom panic hook to ensure the terminal is restored to a usable state 
+/// before the panic info is printed to stderr.
+fn setup_panic_hook() {
+    let default_hook = panic::take_hook();
+    panic::set_hook(Box::new(move |panic_info| {
+        // Force cleanup of TUI/Raw mode
+        let _ = disable_raw_mode();
+        let _ = execute!(io::stdout(), LeaveAlternateScreen);
+        
+        // Pass control to default hook to print stack trace
+        default_hook(panic_info);
+    }));
+}
 
 fn main() -> anyhow::Result<()> {
+    // Initialize panic safety first
+    setup_panic_hook();
+
     // [Directive 1] Resource Limit Elevation (FD Management)
-    // Before elevating the runtime, ensure we have enough file descriptors for the swarm.
     let (soft, hard) = rlimit::getrlimit(Resource::NOFILE)?;
     if let Err(e) = setrlimit(Resource::NOFILE, hard, hard) {
-        // Fallback or warning if not running as root/privileged
         eprintln!("Warning: Failed to set RLIMIT_NOFILE to hard limit: {}. Current: {}/{}", e, soft, hard);
     }
 
     // Initialize the specialized Aether-Red Reactor
-    // [Directive 2] Explicit Runtime Orchestration
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .worker_threads(num_cpus::get())
@@ -30,7 +49,6 @@ fn main() -> anyhow::Result<()> {
             .init();
 
         info!("Aether-Red Reactor Online. FD Limit: {}/{}", hard, hard);
-        info!("Initializing Adversarial Swarm...");
 
         // Initialize subsystems
         if let Err(e) = init_network().await {
@@ -38,13 +56,18 @@ fn main() -> anyhow::Result<()> {
             return Err(e);
         }
 
-        if let Err(e) = init_core().await {
-            warn!("Core engine failed to initialize: {}", e);
-            return Err(e);
-        }
+        // Initialize core and retrieve SHARED STATE
+        let shared_state = match init_core().await {
+            Ok(ss) => ss,
+            Err(e) => {
+                warn!("Core engine failed to initialize: {}", e);
+                return Err(e);
+            }
+        };
 
-        // Run TUI (Blocking)
-        if let Err(e) = run_tui().await {
+        // Run TUI with Shared State (Blocking)
+        // [Directive: Atomic Snapshots]
+        if let Err(e) = run_tui(shared_state).await {
             warn!("TUI crashed: {}", e);
             return Err(e);
         }

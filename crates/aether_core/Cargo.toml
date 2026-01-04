@@ -30,6 +30,9 @@ flume = { workspace = true }
 socket2 = { workspace = true }
 bytes = { workspace = true }
 dashmap = { workspace = true }
+hdrhistogram = { workspace = true }
+strip-ansi-escapes = { workspace = true }
+crossterm = { workspace = true }
 
 [lib]
 path = "src/lib.rs"

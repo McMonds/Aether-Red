@@ -1,8 +1,56 @@
+use bytes::BytesMut;
+use std::sync::atomic::{AtomicU64, AtomicU8, AtomicUsize};
+use std::sync::Arc;
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use std::time::Duration;
-use bytes::BytesMut;
+
+/// [Directive: Worker Hive] Status enum for thread heatmap.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+pub enum WorkerStatus {
+    Idle = 0,
+    Handshaking = 1,
+    Sending = 2,
+    Blocked = 3,
+    Dead = 4,
+}
+
+/// [Directive: Atomic Snapshots] Lock-free shared state for the C2 Dashboard.
+/// Composition of atomic primitives ensures zero lock contention under high-velocity (50k+ RPS).
+pub struct SharedState {
+    pub total_requests: AtomicU64,
+    pub total_bytes: AtomicU64,
+    pub error_count: AtomicU64,
+    pub worker_statuses: Vec<AtomicU8>,
+    pub worker_heartbeats: Vec<AtomicU64>,
+    
+    // [Directive: Interactive C2] Runtime Tunables (Atomic parameter injection)
+    pub target_rps: AtomicUsize,
+    pub jitter_factor: AtomicUsize, // Percentage 0-100
+}
+
+impl SharedState {
+    pub fn new(num_workers: usize) -> Arc<Self> {
+        let mut worker_statuses = Vec::with_capacity(num_workers);
+        let mut worker_heartbeats = Vec::with_capacity(num_workers);
+        for _ in 0..num_workers {
+            worker_statuses.push(AtomicU8::new(WorkerStatus::Idle as u8));
+            worker_heartbeats.push(AtomicU64::new(0));
+        }
+        
+        Arc::new(Self {
+            total_requests: AtomicU64::new(0),
+            total_bytes: AtomicU64::new(0),
+            error_count: AtomicU64::new(0),
+            worker_statuses,
+            worker_heartbeats,
+            target_rps: AtomicUsize::new(1000),
+            jitter_factor: AtomicUsize::new(10),
+        })
+    }
+}
 
 /// Represents a specific endpoint for security auditing or load testing.
 #[derive(Debug, Clone, Serialize, Deserialize)]

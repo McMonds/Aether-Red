@@ -68,12 +68,19 @@ impl PolyglotFuzzer {
 
     /// [Category B] Gzip Compression Bomb - FIXED: No allocation
     fn generate_gzip_bomb(&self, buffer: &mut BytesMut, decompressed_size: usize) {
-        let mut encoder = GzEncoder::new(Vec::new(), Compression::best());
-        let data = vec![0u8; decompressed_size];
-        let _ = encoder.write_all(&data);
-        if let Ok(compressed) = encoder.finish() {
-            buffer.extend_from_slice(&compressed);
+        // [Fix 4] Use a thread-local zero buffer to avoid per-request heap thrashing
+        thread_local! {
+            static ZERO_BUFFER: Vec<u8> = vec![0u8; 1024 * 1024]; // 1MB reusable block
         }
+        
+        ZERO_BUFFER.with(|zeros| {
+            let mut encoder = GzEncoder::new(Vec::new(), Compression::best());
+            let size = std::cmp::min(decompressed_size, zeros.len());
+            let _ = encoder.write_all(&zeros[..size]);
+            if let Ok(compressed) = encoder.finish() {
+                buffer.extend_from_slice(&compressed);
+            }
+        });
     }
 
     /// [Category B] Oversized Headers - FIXED: No allocation
@@ -101,12 +108,14 @@ impl PolyglotFuzzer {
         }
     }
 
-    /// [Category B] Verb Manipulation - FIXED: No allocation
+    /// [Category B] Verb Manipulation - FIXED: Produce complete valid request lines
     fn generate_verb_manipulation(&self, buffer: &mut BytesMut) {
         let verbs = ["PROPFIND", "MOVE", "LOCK", "UNLOCK", "SEARCH", "PURGE"];
         let mut rng = thread_rng();
         let verb = verbs[rng.gen_range(0..verbs.len())];
-        buffer.extend_from_slice(verb.as_bytes());
+        // [Fix 5] Complete request line with dummy headers
+        let req = format!("{} / HTTP/1.1\r\nHost: target.internal\r\n\r\n", verb);
+        buffer.extend_from_slice(req.as_bytes());
     }
 
     /// [Category B] Protocol State Abuse - FIXED: No allocation

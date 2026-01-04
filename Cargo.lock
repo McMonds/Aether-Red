@@ -19,8 +19,10 @@ dependencies = [
  "argon2",
  "bytes",
  "chrono",
+ "crossterm",
  "dashmap",
  "flume",
+ "hdrhistogram",
  "http",
  "mod_auth",
  "mod_fuzz",
@@ -33,6 +35,7 @@ dependencies = [
  "serde_json",
  "socket2 0.5.10",
  "sqlx",
+ "strip-ansi-escapes",
  "tokio",
  "tracing",
  "tracing-appender",
@@ -78,9 +81,11 @@ dependencies = [
 name = "aether_tui"
 version = "0.1.0"
 dependencies = [
+ "aether_traits",
  "anyhow",
  "crossterm",
  "ratatui",
+ "strip-ansi-escapes",
  "tokio",
 ]
 
@@ -887,6 +892,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8094feaf31ff591f651a2664fb9cfd92bba7a60ce3197265e9482ebe753c8f7"
 dependencies = [
  "hashbrown 0.14.5",
+]
+
+[[package]]
+name = "hdrhistogram"
+version = "7.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "765c9198f173dd59ce26ff9f95ef0aafd0a0fe01fb9d72841bc5066a4c06511d"
+dependencies = [
+ "base64",
+ "byteorder",
+ "crossbeam-channel",
+ "flate2",
+ "nom",
+ "num-traits",
 ]
 
 [[package]]
@@ -2495,6 +2514,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "strip-ansi-escapes"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a8f8038e7e7969abb3f1b7c2a811225e9296da208539e0f79c5251d6cac0025"
+dependencies = [
+ "vte",
+]
+
+[[package]]
 name = "strum"
 version = "0.26.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2997,6 +3025,15 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+
+[[package]]
+name = "vte"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "231fdcd7ef3037e8330d8e17e61011a2c244126acc0a982f4040ac3f9f0bc077"
+dependencies = [
+ "memchr",
+]
 
 [[package]]
 name = "walkdir"

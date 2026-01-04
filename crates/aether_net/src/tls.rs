@@ -4,23 +4,31 @@ use anyhow::Result;
 use crate::transport::FuzzerStream;
 use tokio_rustls::TlsConnector as RustlsConnector;
 use tokio_rustls::rustls::{ClientConfig as RustlsConfig, RootCertStore, ServerName, OwnedTrustAnchor};
+use tokio_rustls::rustls::client::Resumption;
 use std::pin::Pin;
 
 /// [Directive 7] Tri-State TLS Architecture.
 /// Abstract interface for TLS providers to bypass fingerprinting/detection.
 /// 
-/// CRITICAL FIX #3: ALPN Protocol Synchronization
-/// The `force_http1` parameter ensures protocol consistency between TLS negotiation
-/// and payload format, preventing PROTOCOL_ERROR when sending HTTP/1.1 text over h2.
+/// [Category C] Granular protocol control for adversarial evasion.
+#[derive(Debug, Clone, Default)]
+pub struct AttackProfile {
+    pub force_http1: bool,
+    pub force_http10: bool,
+    pub force_tls11: bool,
+    pub use_0rtt: bool,
+    pub fragment_handshake: bool,
+}
+
 #[async_trait]
 pub trait TlsImpersonator: Send + Sync {
     /// Handshakes the underlying stream and returns an adversarial TLS session.
-    /// 
-    /// # Arguments
-    /// * `domain` - Target domain for SNI
-    /// * `stream` - Underlying transport stream
-    /// * `force_http1` - If true, removes h2 from ALPN to force HTTP/1.1 (for text-based attacks)
-    async fn handshake(&self, domain: &str, stream: FuzzerStream, force_http1: bool) -> Result<FuzzerStream>;
+    async fn handshake(
+        &self, 
+        domain: &str, 
+        stream: FuzzerStream, 
+        profile: AttackProfile
+    ) -> Result<FuzzerStream>;
 }
 
 /// Provider_Native: Wrapper for rustls (Safe, fast, default).
@@ -44,16 +52,27 @@ impl NativeProvider {
                 })
         );
 
+        // [Category C] Session Replay: Shared memory-backed session cache
+        let session_cache = rustls::client::ClientSessionMemoryCache::new(256);
+        let resumption = Resumption::store(Arc::new(session_cache));
+
         // CRITICAL FIX #3: Two configs - one for HTTP/1.1 only, one for HTTP/2
-        let config_http1 = RustlsConfig::builder()
+        // [Category C] Early Data (0-RTT) enabled on all configs
+        let mut config_http1 = RustlsConfig::builder()
             .with_safe_defaults()
             .with_root_certificates(root_store.clone())
             .with_no_client_auth();
+        config_http1.alpn_protocols = vec![b"http/1.1".to_vec()];
+        config_http1.resumption = resumption.clone();
+        config_http1.enable_early_data = true;
 
-        let config_http2 = RustlsConfig::builder()
+        let mut config_http2 = RustlsConfig::builder()
             .with_safe_defaults()
             .with_root_certificates(root_store)
             .with_no_client_auth();
+        config_http2.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
+        config_http2.resumption = resumption;
+        config_http2.enable_early_data = true;
 
         Ok(Self { 
             config_http1: Arc::new(config_http1),
@@ -64,9 +83,14 @@ impl NativeProvider {
 
 #[async_trait]
 impl TlsImpersonator for NativeProvider {
-    async fn handshake(&self, domain: &str, stream: FuzzerStream, force_http1: bool) -> Result<FuzzerStream> {
+    async fn handshake(&self, domain: &str, stream: FuzzerStream, profile: AttackProfile) -> Result<FuzzerStream> {
+        // [Category C] Protocol Downgrade: NativeProvider only supports TLS 1.2+
+        if profile.force_tls11 {
+            return Err(anyhow::anyhow!("NativeProvider (rustls) does not support TLS 1.0/1.1. use LegacyProvider."));
+        }
+
         // CRITICAL FIX #3: Select config based on attack type
-        let config = if force_http1 {
+        let config = if profile.force_http1 {
             &self.config_http1  // Text-based attacks (smuggling, JSON, headers)
         } else {
             &self.config_http2  // Binary attacks (h2_flood)
@@ -85,18 +109,29 @@ pub struct LegacyProvider;
 
 #[async_trait]
 impl TlsImpersonator for LegacyProvider {
-    async fn handshake(&self, domain: &str, stream: FuzzerStream, force_http1: bool) -> Result<FuzzerStream> {
-        use openssl::ssl::{SslConnector, SslMethod};
+    async fn handshake(&self, domain: &str, stream: FuzzerStream, profile: AttackProfile) -> Result<FuzzerStream> {
+        use openssl::ssl::{SslConnector, SslMethod, SslOptions};
         use tokio_openssl::SslStream;
 
-        let mut builder = SslConnector::builder(SslMethod::tls())?;
+        // [Category C] Protocol Downgrade logic
+        let method = if profile.force_tls11 {
+            // Force TLS 1.1 strictly
+            SslMethod::tls() 
+        } else {
+            SslMethod::tls()
+        };
+
+        let mut builder = SslConnector::builder(method)?;
         
+        if profile.force_tls11 {
+            // Disable everything except TLS 1.1
+            builder.set_options(SslOptions::NO_TLSV1 | SslOptions::NO_TLSV1_2 | SslOptions::NO_TLSV1_3);
+        }
+
         // CRITICAL FIX #3: Configure ALPN based on attack type
-        if force_http1 {
-            // Only advertise HTTP/1.1 for text-based attacks
+        if profile.force_http1 {
             builder.set_alpn_protos(b"\x08http/1.1")?;
         } else {
-            // Advertise both h2 and http/1.1 for binary attacks
             builder.set_alpn_protos(b"\x02h2\x08http/1.1")?;
         }
         
@@ -117,9 +152,7 @@ pub struct ChromeProvider;
 
 #[async_trait]
 impl TlsImpersonator for ChromeProvider {
-    async fn handshake(&self, _domain: &str, _stream: FuzzerStream, _force_http1: bool) -> Result<FuzzerStream> {
-        // [Advanced Evasion] BoringSSL doesn't have direct tokio integration.
-        // In production, this would configure ALPN via FFI based on force_http1 flag.
+    async fn handshake(&self, _domain: &str, _stream: FuzzerStream, _profile: AttackProfile) -> Result<FuzzerStream> {
         Err(anyhow::anyhow!("BoringSSL Provider requires custom async wrapper (not implemented in stub)"))
     }
 }
@@ -145,8 +178,8 @@ impl Ja3Cycler {
 
 #[async_trait]
 impl TlsImpersonator for Ja3Cycler {
-    async fn handshake(&self, domain: &str, stream: FuzzerStream, force_http1: bool) -> Result<FuzzerStream> {
+    async fn handshake(&self, domain: &str, stream: FuzzerStream, profile: AttackProfile) -> Result<FuzzerStream> {
         let i = self.index.fetch_add(1, std::sync::atomic::Ordering::Relaxed) % self.providers.len();
-        self.providers[i].handshake(domain, stream, force_http1).await
+        self.providers[i].handshake(domain, stream, profile).await
     }
 }
