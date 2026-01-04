@@ -1,7 +1,7 @@
 # Aether-Red
 
-> [!IMPORTANT]
-> **ENGINEERING STATUS**: Aether-Red is **100% PRODUCTION HARDENED**. The engine has passed a deep architectural audit and surgical remediation, achieving zero-warning build integrity.
+> [!CAUTION]
+> **DEVELOPMENT STATUS**: Aether-Red is currently in the **TEST PHASE**. The engine is undergoing rigorous adversarial validation, benchmark calibration, and audit remediation verification.
 
 > **An Advanced Adversarial Emulation & High-Frequency Traffic Generation Framework**
 
