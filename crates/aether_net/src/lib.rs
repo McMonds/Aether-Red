@@ -1,6 +1,8 @@
 pub mod proxy;
 pub mod tls;
 pub mod doh;
+pub mod transport;
+pub mod h2_flood;
 
 use anyhow::Result;
 use proxy::ProxyManager;

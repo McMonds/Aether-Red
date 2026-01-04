@@ -8,6 +8,8 @@ aether_traits = { path = "../../crates/aether_traits" }
 async-trait = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
+dashmap = { workspace = true }
+tokio = { workspace = true }
 
 [lib]
 path = "src/lib.rs"

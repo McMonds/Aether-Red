@@ -11,6 +11,17 @@ anyhow = { workspace = true }
 tracing = { workspace = true }
 rand = { workspace = true }
 serde = { workspace = true }
+socket2 = { workspace = true }
+bytes = { workspace = true }
+tokio-rustls = "0.24"
+rustls-native-certs = "0.6"
+webpki-roots = "0.25"
+openssl = { workspace = true }
+boring = { workspace = true }
+tokio-openssl = { workspace = true }
+rustls = "0.21"
+async-trait = { workspace = true }
+h2 = "0.3"
 
 [lib]
 path = "src/lib.rs"

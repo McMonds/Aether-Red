@@ -11,18 +11,40 @@ members = [
 ]
 
 [workspace.dependencies]
+# Concurrency & Runtime
 tokio = { version = "1.32", features = ["full"] }
+async-trait = "0.1"
+parking_lot = "0.12"
+dashmap = "6.0"
+num_cpus = "1.16"
+flume = "0.11"
+
+# Networking & Evasion
+reqwest = { version = "0.11", features = ["json", "rustls-tls", "socks"] }
+hyper = "0.14"
+socket2 = { version = "0.5", features = ["all"] }
+boring = "4.0"
+openssl = { version = "0.10", features = ["vendored"] }
+tokio-openssl = "0.6"
+bytes = "1.5"
+
+# System & OS
+libc = "0.2"
+rlimit = "0.10"
+
+# Data & Persistence
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Security
+argon2 = "0.5"
+zeroize = { version = "1.6", features = ["derive"] }
+rand = "0.8"
+
+# Utilities
 anyhow = "1.0"
 thiserror = "1.0"
 tracing = "0.1"
 tracing-subscriber = "0.3"
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite"] }
-reqwest = { version = "0.11", features = ["json", "rustls-tls", "socks"] }
-rand = "0.8"
-sha2 = "0.10"
-argon2 = "0.5"
-zeroize = { version = "1.6", features = ["derive"] }
-parking_lot = "0.12"
-async-trait = "0.1"

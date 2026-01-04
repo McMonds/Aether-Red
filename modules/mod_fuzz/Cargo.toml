@@ -9,6 +9,9 @@ async-trait = { workspace = true }
 anyhow = { workspace = true }
 uuid = { version = "1.18.1", features = ["v4"] }
 rand = { workspace = true }
+bytes = { workspace = true }
+flate2 = "1.0"
+urlencoding = "2.1"
 
 [lib]
 path = "src/lib.rs"

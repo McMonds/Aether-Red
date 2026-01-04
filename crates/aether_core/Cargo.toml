@@ -24,6 +24,12 @@ mod_fuzz = { path = "../../modules/mod_fuzz" }
 mod_auth = { path = "../../modules/mod_auth" }
 aether_tui = { path = "../aether_tui" }
 notify = "6.1"
+rlimit = { workspace = true }
+num_cpus = { workspace = true }
+flume = { workspace = true }
+socket2 = { workspace = true }
+bytes = { workspace = true }
+dashmap = { workspace = true }
 
 [lib]
 path = "src/lib.rs"
