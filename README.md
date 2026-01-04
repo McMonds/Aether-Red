@@ -94,5 +94,9 @@ cargo build --release
 
 ---
 
-> [!IMPORTANT]
-> **Legal Disclaimer**: Aether-Red is provided for authorized security auditing and research purposes only. The authors assume no liability for misuse or damage caused by this tool. Always ensure you have explicit permission before testing any target.
+---
+
+> [!CAUTION]
+> **LEGAL & PROPRIETARY NOTICE**: Aether-Red is a **PROPRIETARY** software engine. All rights are reserved by the copyright holder. Not a single person or entity is permitted to use, modify, or distribute this software without express written permission. Unauthorized use is a violation of international copyright law.
+
+For licensing inquiries or permission requests, contact the copyright holder.
